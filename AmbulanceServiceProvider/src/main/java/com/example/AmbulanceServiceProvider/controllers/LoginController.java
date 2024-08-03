@@ -4,11 +4,13 @@ import com.example.AmbulanceServiceProvider.security.CookieUtills;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletResponse;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import static com.example.AmbulanceServiceProvider.security.PasswordUtills.checkPass;
 import static com.example.AmbulanceServiceProvider.security.PasswordUtills.genPass;
 @RestController
+
 @RequestMapping("/")
 public class LoginController {
     @Autowired

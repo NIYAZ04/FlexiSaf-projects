@@ -1,183 +1,123 @@
 package com.example.AmbulanceServiceProvider.controllers;
 
 import com.example.AmbulanceServiceProvider.models.user;
-
+import com.example.AmbulanceServiceProvider.models.UserDTO;
 import com.example.AmbulanceServiceProvider.models.userTypes;
-import com.example.AmbulanceServiceProvider.controllers.UserRepository;
 import com.example.AmbulanceServiceProvider.security.CookieUtills;
-
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletResponse;
 import java.util.List;
 
 import static com.example.AmbulanceServiceProvider.security.PasswordUtills.genPass;
 
 @RestController
 @RequestMapping("/")
-
 public class UserController {
 
     @Autowired
     UserRepository userRepository;
 
     @PostMapping("/add/{role}")
-    @Operation(summary = "[ADMIN] Add a user to the database with a given role", description = "Adds a user with the specified role to the database. Requires admin privileges.")
+    @Operation(summary = "[ADMIN] Add a user to the database with the given role")
+
     public user addUser(HttpServletResponse response,
                         @CookieValue(value = "Token", defaultValue = "") String token,
-                        @RequestParam("FirstName") String fname,
-                        @RequestParam("LastName") String lname,
-                        @RequestParam("id") String id,
+                        @RequestBody UserDTO userDTO,
                         @PathVariable("role") String role) {
-        CookieUtills cookieUtils = new CookieUtills();
-        if (cookieUtils.isAdmin(token)) {
+        CookieUtills cookieUtills = new CookieUtills();
+        if (cookieUtills.isAdmin(token)) {
             try {
-                userTypes role_assign=userTypes.GUEST;
-                int flag=0;
-                userTypes[] available_types = userTypes.values();
-                for (userTypes role_x : available_types) {
-                    if (role.equalsIgnoreCase(role_x.name())) {
-                        role_assign = role_x;
-                        flag = 1;
+                userTypes roleAssign = userTypes.GUEST;
+                boolean roleFound = false;
+                for (userTypes roleType : userTypes.values()) {
+                    if (role.equalsIgnoreCase(roleType.name())) {
+                        roleAssign = roleType;
+                        roleFound = true;
+                        break;
                     }
                 }
-                if (flag==0)
-                {
-                    response.setStatus(403);
+
+                if (!roleFound) {
+                    response.setStatus(403); // Forbidden: Role not found
                     return null;
                 }
-                String password = genPass(6);
-                List<user> ll = userRepository.findByUserId(id);
-                if (ll.isEmpty()) {
-                    user User = new user(fname, lname, id);
-                    User.setRole(role_assign);
-                    User.setPassHash(password);
-                    userRepository.save(User);
 
-                    response.setStatus(201);
-                    return User;
-                }
-                else {
-                    response.setStatus(403);
+                List<user> existingUsers = userRepository.findByUserId(userDTO.getId());
+                if (existingUsers.isEmpty()) {
+                    user newUser = new user(userDTO.getFirstName(), userDTO.getLastName(), userDTO.getId());
+                    newUser.setRole(roleAssign);
+                    newUser.setPassHash(genPass(6));
+                    userRepository.save(newUser);
+                    response.setStatus(201); // Created
+                    return newUser;
+                } else {
+                    response.setStatus(403); // Forbidden: User ID already exists
                     return null;
                 }
             } catch (Exception e) {
-                response.setStatus(403);
-                System.out.print(e.getStackTrace());
+                response.setStatus(403); // Forbidden: Other exceptions
+                e.printStackTrace();
                 return null;
             }
         } else {
-            response.setStatus(401);
+            response.setStatus(401); // Unauthorized: Not an admin
             return null;
         }
     }
 
     @PostMapping("/add-doctor")
-    @Operation(summary = "[ADMIN] Add a doctor to the database", description = "Adds a doctor to the database. Requires admin privileges.")    public user addDoctor(HttpServletResponse response,
+    @Operation(summary = "[ADMIN] Add a doctor to the database")
+    public user addDoctor(HttpServletResponse response,
                           @CookieValue(value = "Token", defaultValue = "") String token,
-                          @RequestParam("FirstName") String fname,
-                          @RequestParam("LastName") String lname,
-                          @RequestParam("id") String id) {
-        CookieUtills cookieUtils = new CookieUtills();
-        if (cookieUtils.isAdmin(token)) {
-            try {
-                String password = genPass(6);
-                List<user> ll = userRepository.findByUserId(id);
-                if (ll.isEmpty()) {
-                    user User = new user(fname, lname, id);
-                    User.setRole(userTypes.DOCTOR);
-                    User.setPassHash(password);
-                    userRepository.save(User);
-
-                    response.setStatus(201);
-                    return User;
-                }
-                else {
-                    response.setStatus(403);
-                    return null;
-                }
-            } catch (Exception e) {
-                response.setStatus(403);
-                System.out.print(e.getStackTrace());
-                return null;
-            }
-        } else {
-            response.setStatus(401);
-            return null;
-        }
+                          @RequestBody UserDTO userDTO) {
+        return addUserWithSpecificRole(response, token, userDTO, userTypes.DOCTOR);
     }
 
     @PostMapping("/add-employee")
-    @Operation(summary = "[ADMIN] Add an employee to the database", description = "Adds an employee to the database. Requires admin privileges.")    public user addEmployee(
-            HttpServletResponse response,
-            @CookieValue(value = "Token", defaultValue = "") String token,
-            @RequestParam("FirstName") String fname,
-            @RequestParam("LastName") String lname,
-            @RequestParam("id") String id) {
-        CookieUtills cookieUtils = new CookieUtills();
-        if (cookieUtils.isAdmin(token)) {
-            try {
-                String password = genPass(6);
-                List<user> ll = userRepository.findByUserId(id);
-                if (ll.isEmpty()) {
-                    user User = new user(fname, lname, id);
-                    User.setRole(userTypes.EMPLOYEE);
-                    User.setPassHash(password);
-                    userRepository.save(User);
-
-                    response.setStatus(201);
-                    return User;
-                }
-                else {
-                    response.setStatus(403);
-                    return null;
-                }
-            } catch (Exception e) {
-                response.setStatus(403);
-                System.out.print(e.getStackTrace());
-                return null;
-            }
-        } else {
-            response.setStatus(401);
-            return null;
-        }
+    @Operation(summary = "[ADMIN] Add an employee to the database")
+    public user addEmployee(HttpServletResponse response,
+                            @CookieValue(value = "Token", defaultValue = "") String token,
+                            @RequestBody UserDTO userDTO) {
+        return addUserWithSpecificRole(response, token, userDTO, userTypes.EMPLOYEE);
     }
 
     @PostMapping("/add-attendee")
-    @Operation(summary = "[ADMIN] Add an attendee to the database", description = "Adds an attendee to the database. Requires admin privileges.")    public user addAttendee(HttpServletResponse response,
+    @Operation(summary = "[ADMIN] Add an attendee to the database")
+    public user addAttendee(HttpServletResponse response,
                             @CookieValue(value = "Token", defaultValue = "") String token,
-                            @RequestParam( "FirstName") String fname,
-                            @RequestParam( "LastName") String lname,
-                            @RequestParam("id") String id) {
+                            @RequestBody UserDTO userDTO) {
+        return addUserWithSpecificRole(response, token, userDTO, userTypes.ATTENDEE);
+    }
+
+    private user addUserWithSpecificRole(HttpServletResponse response,
+                                         String token,
+                                         UserDTO userDTO,
+                                         userTypes role) {
         CookieUtills cookieUtills = new CookieUtills();
         if (cookieUtills.isAdmin(token)) {
             try {
-                String password = genPass(6);
-                List<user> ll = userRepository.findByUserId(id);
-                if (ll.isEmpty()) {
-                    user User = new user(fname, lname, id);
-                    User.setRole(userTypes.ATTENDEE);
-                    User.setPassHash(password);
-                    userRepository.save(User);
-
-                    response.setStatus(201);
-                    return User;
-                }
-                else {
-                    response.setStatus(403);
+                List<user> existingUsers = userRepository.findByUserId(userDTO.getId());
+                if (existingUsers.isEmpty()) {
+                    user newUser = new user(userDTO.getFirstName(), userDTO.getLastName(), userDTO.getId());
+                    newUser.setRole(role);
+                    newUser.setPassHash(genPass(6));
+                    userRepository.save(newUser);
+                    response.setStatus(201); // Created
+                    return newUser;
+                } else {
+                    response.setStatus(403); // Forbidden: User ID already exists
                     return null;
                 }
-
-            }
-            catch (Exception e) {
-                response.setStatus(403);
-                System.out.print(e.getStackTrace());
+            } catch (Exception e) {
+                response.setStatus(403); // Forbidden: Other exceptions
+                e.printStackTrace();
                 return null;
             }
         } else {
-            response.setStatus(401);
+            response.setStatus(401); // Unauthorized: Not an admin
             return null;
         }
     }

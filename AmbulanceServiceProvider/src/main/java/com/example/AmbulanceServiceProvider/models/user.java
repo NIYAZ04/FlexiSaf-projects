@@ -2,10 +2,14 @@ package com.example.AmbulanceServiceProvider.models;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+
+@Getter
 @Entity
 @Table(name = "app_user")
 @Schema(description = "Auto Generated User Id", example = "1")
 public class user {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Schema(description = "First name of the user", example = "John")
@@ -36,37 +40,12 @@ public class user {
         this.userId = userId;
     }
 
-    // Getters and Setters
-    public Long getId() {
-        return id;
-    }
-
     public void setId(Long id) {
         this.id = id;
     }
 
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public String getPassHash() {
-        return passHash;
-    }
-
     public void setPassHash(String passHash) {
         this.passHash = passHash;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public userTypes getRole() {
-        return role;
     }
 
     public void setRole(userTypes role) {
