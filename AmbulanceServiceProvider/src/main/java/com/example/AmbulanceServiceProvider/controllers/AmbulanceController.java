@@ -3,7 +3,6 @@ package com.example.AmbulanceServiceProvider.controllers;
 import com.example.AmbulanceServiceProvider.models.ambulance;
 import com.example.AmbulanceServiceProvider.models.availability;
 import com.example.AmbulanceServiceProvider.controllers.AmbulanceRepository;
-import com.example.AmbulanceServiceProvider.security.CookieUtills;
 
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,21 +17,17 @@ public class AmbulanceController {
     @Autowired
     AmbulanceRepository ambulanceRepository;
 
-    @PostMapping(value="/add")
-    @Operation(summary = " [ADMIN] Add an ambulance to database")
+    @PostMapping(value = "/add")
+    @Operation(summary = "[ADMIN] Add an ambulance to database")
     public ambulance addNewAmbulance(
             HttpServletResponse response,
-            @CookieValue(value = "Token", defaultValue = "") String token,
             @RequestParam("NumberPlate") String np,
             @RequestParam("isAvailable") String isAvailable) {
         try {
-            if (!isAdmin(token)) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                return null;
-            }
             ambulance Ambulance = new ambulance(np,
                     isAvailable.equalsIgnoreCase("true") ? availability.AVAILABLE : availability.UNAVAILABLE);
             ambulanceRepository.save(Ambulance);
+            response.setStatus(HttpServletResponse.SC_CREATED);
             return Ambulance;
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
@@ -48,32 +43,21 @@ public class AmbulanceController {
     }
 
     @PutMapping("/available/{NumberPlate}")
-    @Operation(summary = " [ADMIN] Make an ambulance Available")
+    @Operation(summary = "[ADMIN] Make an ambulance Available")
     public ambulance makeAvailable(HttpServletResponse response,
-                                   @CookieValue(value = "Token", defaultValue = "") String token,
                                    @PathVariable("NumberPlate") String np) {
-        return updateAmbulanceAvailability(response, token, np, availability.AVAILABLE);
+        return updateAmbulanceAvailability(response, np, availability.AVAILABLE);
     }
 
     @PutMapping("/unavailable/{NumberPlate}")
-    @Operation(summary = " [ADMIN] Make an ambulance Unavailable")
+    @Operation(summary = "[ADMIN] Make an ambulance Unavailable")
     public ambulance makeUnavailable(HttpServletResponse response,
-                                     @CookieValue(value = "Token", defaultValue = "") String token,
                                      @PathVariable("NumberPlate") String np) {
-        return updateAmbulanceAvailability(response, token, np, availability.UNAVAILABLE);
+        return updateAmbulanceAvailability(response, np, availability.UNAVAILABLE);
     }
 
-    private boolean isAdmin(String token) {
-        CookieUtills cookieUtills = new CookieUtills();
-        return cookieUtills.isAdmin(token);
-    }
-
-    private ambulance updateAmbulanceAvailability(HttpServletResponse response, String token, String np, availability status) {
+    private ambulance updateAmbulanceAvailability(HttpServletResponse response, String np, availability status) {
         try {
-            if (!isAdmin(token)) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                return null;
-            }
             ambulance Ambulance = ambulanceRepository.findByNumberplate(np).get(0);
             Ambulance.setStatus(status);
             ambulanceRepository.save(Ambulance);
